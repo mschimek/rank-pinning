@@ -45,7 +45,7 @@ void print_pinning() {
         auto const &info_object = recv_buf[j];
         std::string const node(info_object.mpi_proc_name.data(),
                                info_object.mpi_name_length);
-        std::cout << "Rank: " << std::setw(5) << i
+        std::cout << "Rank: " << std::setw(5) << (i / recv_count)
                   << " OMP-Thread: " << std::setw(5) << info_object.thread_id
                   << "/" << std::setw(5) << info_object.num_threads
                   << " on logical core: " << std::setw(5)
