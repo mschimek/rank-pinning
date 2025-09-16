@@ -20,6 +20,9 @@ struct Info {
 void print_pinning() {
   kamping::Communicator comm;
   std::vector<Info> info_objects(omp_get_max_threads());
+  std::array<char, MPI_MAX_PROCESSOR_NAME> mpi_proc_name;
+  int mpi_name_length = 0;
+  MPI_Get_processor_name(mpi_proc_name.data(), &mpi_name_length);
 
 #pragma omp parallel
   {
@@ -30,12 +33,8 @@ void print_pinning() {
     info_object.thread_id = thread_id;
     info_object.num_threads = num_threads;
     info_object.logical_core_id = core_id;
-    MPI_Get_processor_name(info_object.mpi_proc_name.data(),
-                           &info_object.mpi_name_length);
-#pragma omp single
-    {
-      info_objects.resize(num_threads);
-    }
+    info_object.mpi_proc_name = mpi_proc_name;
+    info_object.mpi_name_length = mpi_name_length;
   }
   auto [recv_buf, recv_count] =
       comm.gather(kamping::send_buf(info_objects), kamping::recv_count_out());
@@ -43,7 +42,7 @@ void print_pinning() {
     for (std::size_t i = 0; i < recv_buf.size(); i += recv_count) {
       for (std::size_t j = i; j < i + static_cast<std::size_t>(recv_count);
            ++j) {
-        auto const &info_object = info_objects[j];
+        auto const &info_object = recv_buf[j];
         std::string const node(info_object.mpi_proc_name.data(),
                                info_object.mpi_name_length);
         std::cout << "Rank: " << std::setw(5) << i
@@ -58,10 +57,6 @@ void print_pinning() {
 }
 
 int main(int argc, char *argv[]) {
-
   kamping::Environment env;
-  print_pinning();
-  sleep(2);
-  std::cout << "\n\n";
   print_pinning();
 }
