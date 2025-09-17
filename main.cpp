@@ -2,7 +2,10 @@
 #include <iomanip>
 #include <iostream>
 #include <omp.h>
+#include <pthread.h>
 #include <sched.h>
+#include <stdio.h>
+#include <sys/syscall.h>
 #include <unistd.h>
 #include <vector>
 
@@ -15,6 +18,7 @@ struct Info {
   int logical_core_id;
   std::array<char, MPI_MAX_PROCESSOR_NAME> mpi_proc_name;
   int mpi_name_length = 0;
+  unsigned long long cpu_mask;
 };
 
 void print_pinning() {
@@ -35,6 +39,23 @@ void print_pinning() {
     info_object.logical_core_id = core_id;
     info_object.mpi_proc_name = mpi_proc_name;
     info_object.mpi_name_length = mpi_name_length;
+    pid_t ltid = syscall(__NR_gettid);
+
+    // Read the Cpus_allowed_list from /proc/self/task/<tid>/status
+    char path[256];
+    snprintf(path, sizeof(path), "/proc/self/task/%d/status", ltid);
+
+    FILE *f = fopen(path, "r");
+    unsigned long long mask = 0;
+    if (f) {
+      char line[256];
+      while (fgets(line, sizeof(line), f)) {
+        if (sscanf(line, "Cpus_allowed_list:\t%llx", &info_object.cpu_mask) ==
+            1)
+          break;
+      }
+      fclose(f);
+    }
   }
   auto [recv_buf, recv_count] =
       comm.gather(kamping::send_buf(info_objects), kamping::recv_count_out());
@@ -49,7 +70,8 @@ void print_pinning() {
                   << " OMP-Thread: " << std::setw(5) << info_object.thread_id
                   << "/" << std::setw(5) << info_object.num_threads
                   << " on logical core: " << std::setw(5)
-                  << info_object.logical_core_id << " node:" << node
+                  << info_object.logical_core_id << std::setw(9)
+                  << " cpu mask: " << info_object.cpu_mask << " node:" << node
                   << std::endl;
       }
     }
