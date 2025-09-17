@@ -56,6 +56,9 @@ void print_pinning() {
       }
       fclose(f);
     }
+ #pragma omp critical
+        printf("MPI rank TBD, thread %d, tid %d, sched_getcpu()=%d, global cpumask=0x%llx\n",
+               info_object.thread_id, ltid, info_object.logical_core_id, info_object.cpu_mask);
   }
   auto [recv_buf, recv_count] =
       comm.gather(kamping::send_buf(info_objects), kamping::recv_count_out());
@@ -71,7 +74,7 @@ void print_pinning() {
                   << "/" << std::setw(5) << info_object.num_threads
                   << " on logical core: " << std::setw(5)
                   << info_object.logical_core_id << std::setw(9)
-                  << " cpu mask: " << std::hex << info_object.cpu_mask << " node:" << node
+                  << " cpu mask: 0x" << std::hex << info_object.cpu_mask << std::dec << " node:" << node
                   << std::endl;
       }
     }
