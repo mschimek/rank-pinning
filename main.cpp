@@ -71,7 +71,7 @@ void print_pinning() {
                   << "/" << std::setw(5) << info_object.num_threads
                   << " on logical core: " << std::setw(5)
                   << info_object.logical_core_id << std::setw(9)
-                  << " cpu mask: 0x" << std::setw(8) std::hex
+                  << " cpu mask: 0x" << std::setw(8) << std::hex
                   << info_object.cpu_mask << std::dec << " node:" << node
                   << std::endl;
       }
